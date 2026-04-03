@@ -10,7 +10,7 @@ st.set_page_config(page_title="Analyse de Relevés Bancaires", layout="wide")
 st.title("Analyse de Relevés Bancaires")
 
 # Chemin vers les identifiants Google Drive
-credentials_path = r'C:\Users\alsan\json'  # Remplacez par le chemin exact de votre fichier JSON
+credentials_path = r'C:\Users\alsan\json\credentials.json'  # Remplacez par le chemin exact de votre fichier JSON
 
 # Authentification
 creds = service_account.Credentials.from_service_account_file(credentials_path)
