@@ -1,6 +1,5 @@
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
-from googleapiclient.errors import HttpError
 import io
 import pandas as pd
 import pdfplumber
@@ -11,8 +10,8 @@ import os
 st.set_page_config(page_title="Analyse de Relevés Bancaires", layout="wide")
 st.title("Analyse de Relevés Bancaires")
 
-# Chemin vers les identifiants Google Drive
-credentials_path = r'C:\Users\alsan\json\credentials.json'
+# Chemin relatif vers les identifiants Google Drive
+credentials_path = 'credentials.json'
 
 # Vérifiez si le fichier de credentials existe
 if not os.path.exists(credentials_path):
@@ -34,9 +33,6 @@ else:
                     fields="files(id, name)"
                 ).execute()
                 return results.get('files', [])
-            except HttpError as error:
-                st.error(f"Une erreur HTTP s'est produite : {error}")
-                return []
             except Exception as e:
                 st.error(f"Erreur lors de la liste des fichiers : {e}")
                 return []
@@ -45,7 +41,7 @@ else:
         files = list_files_in_folder(parent_folder_id)
 
         if not files:
-            st.write('Aucun fichier trouvé ou erreur d\'accès.')
+            st.write('Aucun fichier trouvé.')
         else:
             st.write('Fichiers disponibles :')
             for file in files:
@@ -67,9 +63,6 @@ else:
                     downloader = request.execute_media_io_base_downloader(downloader)
                     downloader.seek(0)
                     return downloader
-                except HttpError as error:
-                    st.error(f"Une erreur HTTP s'est produite lors du téléchargement : {error}")
-                    return None
                 except Exception as e:
                     st.error(f"Erreur lors du téléchargement du fichier : {e}")
                     return None
