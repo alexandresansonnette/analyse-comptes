@@ -1,7 +1,25 @@
-streamlit
-pandas
-pdfplumber
-google-auth
-google-auth-oauthlib
-google-auth-httplib2
-google-api-python-client
+# ─────────────────────────────────────────────────────────────────
+# Requirements — Analyse de Relevés Bancaires
+# Python 3.13 — Avril 2025
+# ─────────────────────────────────────────────────────────────────
+
+# Interface web — st.dialog dispo à partir de 1.35
+streamlit==1.44.0
+
+# Données — numpy 2.x requis pour Python 3.13
+pandas==2.2.3
+numpy==2.2.4
+
+# Lecture PDF
+pdfplumber==0.11.4
+
+# Graphiques
+plotly==5.24.1
+kaleido==0.2.1
+matplotlib==3.9.4      # requis par pandas Styler (background_gradient)
+
+# Google API
+google-auth==2.35.0
+google-auth-oauthlib==1.2.1
+google-auth-httplib2==0.2.0
+google-api-python-client==2.151.0
