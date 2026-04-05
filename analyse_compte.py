@@ -87,6 +87,34 @@ MOIS = [
 
 PALETTE = px.colors.qualitative.Safe
 
+# ── Chargement des communes françaises ────────────────────────────────────
+def _charger_communes() -> set:
+    """Charge le référentiel des communes françaises depuis le CSV INSEE.
+    Retourne un set de noms en majuscules sans accents.
+    Le fichier v_commune_depuis_1943.csv doit être dans le même dossier que ce script.
+    """
+    chemin = os.path.join(os.path.dirname(os.path.abspath(__file__)), "v_commune_depuis_1943.csv")
+    communes = set()
+    if not os.path.exists(chemin):
+        return communes
+    try:
+        import csv as _csv
+        with open(chemin, encoding="utf-8", errors="replace") as f:
+            reader = _csv.DictReader(f)
+            for row in reader:
+                if not row.get("DATE_FIN", "").strip():   # communes actives uniquement
+                    ncc = row.get("NCC", "").strip().upper()
+                    if ncc:
+                        communes.add(ncc)                  # nom complet
+                        for mot in ncc.split():
+                            if len(mot) >= 4:              # ignorer EN, DE, SUR, LES...
+                                communes.add(mot)
+    except Exception:
+        pass
+    return communes
+
+_COMMUNES_FR = _charger_communes()
+
 
 # ══════════════════════════════════════════════════════════════════════════════
 # PERSISTANCE
@@ -429,7 +457,7 @@ _TOKENS_GENERIQUES = re.compile(
       | paiement | psc | tpe | cb | chq | ch[eè]que | ech | cotis
       | r[eè]glement | r[eé]gl | fact | facture
       | carte | vers | de | du | le | la | les | au | aux | et | ou | par | sur
-      | m | mr | mme | ag | gestion | [eé]ch[eé]ance | [eé]ch[eé]ances
+      | m | mr | mme | dr | ag | gestion | [eé]ch[eé]ance | [eé]ch[eé]ances
     )$""",
     re.IGNORECASE | re.VERBOSE,
 )
@@ -449,6 +477,8 @@ def _extraire_tronc(libelle: str, max_mots_utiles: int = 3) -> str:
     for tok in tokens:
         if _RE_TOKEN_BRUIT.search(tok) or tok == "-": continue
         if _TOKENS_GENERIQUES.match(tok): continue
+        # Ignorer les noms de communes — trop vagues comme mot-clé
+        if tok.upper() in _COMMUNES_FR: continue
         mots_utiles.append(tok)
         if len(mots_utiles) >= max_mots_utiles: break
     return " ".join(mots_utiles) if mots_utiles else ""
@@ -459,10 +489,21 @@ def _est_cheque(libelle: str) -> bool:
     return bool(_RE_CHEQUE.match(libelle.strip()))
 
 def _est_virement_opaque(libelle: str) -> bool:
-    """Virement dont le tronc distinctif est vide — traité manuellement comme un chèque."""
+    """Virement ou paiement dont le tronc distinctif est vide ou trop vague.
+    Couvre : virements (VIR), paiements sans contact (PSC, CB, PAIEMENT).
+    Ex : 'VIR INST FACTURE 250119' → tronc vide → opaque
+         'PAIEMENT PSC 0502 AUCH'  → tronc = AUCH (ville) → opaque
+    """
     lib = libelle.strip()
-    if not re.match(r"^(vir(ement)?\s)", lib, re.IGNORECASE):
+    est_virement = bool(re.match(r"^(vir(ement)?\s)", lib, re.IGNORECASE))
+    est_paiement = bool(re.match(r"^(paiement|psc|cb\s|carte\s)", lib, re.IGNORECASE))
+    if not est_virement and not est_paiement:
         return False
+    # Services de paiement instantané entre particuliers — toujours opaques
+    # car le nom du destinataire change à chaque fois
+    _SERVICES_P2P = ("wero", "paylib", "lydia", "sumeria")
+    if any(s in lib.lower() for s in _SERVICES_P2P):
+        return True
     tronc = _extraire_tronc(lib)
     return not tronc or len(tronc) <= 3
 
